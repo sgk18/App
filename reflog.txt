@@ -1,0 +1,9 @@
+﻿206bf20 HEAD@{0}: commit: fire base
+f1f90bf HEAD@{1}: checkout: moving from main to Surya
+fd6f56c HEAD@{2}: reset: moving to HEAD
+fd6f56c HEAD@{3}: commit: fire base
+212fa35 HEAD@{4}: commit: logo
+dc02f9f HEAD@{5}: commit: login page
+e7393bb HEAD@{6}: pull --ff --recurse-submodules --progress origin: Merge made by the 'ort' strategy.
+7b8e4e8 HEAD@{7}: commit: initial
+d37f1f0 HEAD@{8}: clone: from https://github.com/sgk18/App.git

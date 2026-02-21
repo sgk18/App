@@ -54,9 +54,10 @@ export default function SignupPage() {
       }
 
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Failed to create account.");
+      const errorMessage = err instanceof Error ? err.message : "Failed to create account.";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -164,11 +165,18 @@ export default function SignupPage() {
               />
             </div>
 
+            {error && (
+              <div className="text-red-500 text-sm font-medium text-center">
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-md hover:opacity-90 transition-all active:scale-[0.98]"
+              disabled={isLoading}
+              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-md hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Create Account
+              {isLoading ? "Creating Account..." : "Create Account"}
             </button>
           </form>
 

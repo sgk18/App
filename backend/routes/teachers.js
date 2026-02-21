@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const verifyToken = require('../middleware/authMiddleware');
 
 // POST /api/teachers/register-teacher
-router.post('/register-teacher', verifyToken, async (req, res) => {
+router.post('/register-teacher', async (req, res) => {
   try {
     const { name, email, department } = req.body;
     const teacherId = req.user.uid;

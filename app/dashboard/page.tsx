@@ -47,7 +47,13 @@ export default function DashboardPage() {
 
   const handleGoogleCalendarLink = async () => {
     try {
-      const response = await fetch("http://localhost:5000/auth/google");
+      const user = auth.currentUser;
+      if (!user) {
+        console.error("User not logged in");
+        return;
+      }
+      
+      const response = await fetch(`http://localhost:5000/auth/google?teacherId=${user.uid}`);
       if (response.ok) {
         const data = await response.json();
         // Redirect the user to the Google OAuth consent screen

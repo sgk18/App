@@ -1,14 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
-const { oauth2Client, getCalendarEvents } = require('../services/googleAuth');
-const verifyToken = require('../middleware/authMiddleware');
+const { oauth2Client } = require('../services/googleAuth');
 
 /**
  * Route: GET /auth/google
  * Description: Redirects the user to Google's OAuth 2.0 consent screen.
+ * Query Params: teacherId (required to associate token upon callback)
  */
 router.get('/auth/google', (req, res) => {
+  const { teacherId } = req.query;
+
+  if (!teacherId) {
+    return res.status(400).json({ error: "teacherId is required" });
+  }
+
   const scopes = [
     'https://www.googleapis.com/auth/calendar' // Scope for Google Calendar reading and writing
   ];
@@ -18,6 +24,7 @@ router.get('/auth/google', (req, res) => {
       access_type: 'offline', // Ensures a refresh token is returned
       prompt: 'consent', // Forces consent screen to ensure refresh token is provided
       scope: scopes,
+      state: teacherId // Crucial: send teacherId through Google flow so we get it back
     });
 
     res.status(200).json({ url: authorizationUrl });
@@ -32,20 +39,20 @@ router.get('/auth/google', (req, res) => {
  * Description: Handles the callback from Google OAuth, exchanges the code for tokens, 
  *              and saves the tokens to the authenticated teacher's profile in Firestore.
  */
-router.get('/auth/google/callback', verifyToken, async (req, res) => {
-  console.log("--> GET /auth/google/callback HIT");
+router.get('/auth/google/callback', async (req, res) => {
+  console.log("--> GET /auth/google/callback HIT (PUBLIC ROUTE)");
 
   const code = req.query.code;
-  console.log("--> Received Code:", code);
+  const teacherId = req.query.state; // Extracted directly from state!
 
-  if (!code) {
-    console.error("--> Error: Authorization code missing");
-    return res.status(400).json({ error: "Authorization code is required." });
+  console.log("--> Received Code:", code, "for Teacher ID:", teacherId);
+
+  if (!code || !teacherId) {
+    console.error("--> Error: Authorization code or Teacher ID missing");
+    return res.status(400).json({ error: "Authorization code and matching state are required." });
   }
 
   try {
-    // Assume teacherId is available via JWT middleware
-    const teacherId = req.user.uid;
     console.log(`--> Processing OAuth for Teacher ID: ${teacherId}`);
 
     // Exchange authorization code for access and refresh tokens
@@ -65,27 +72,6 @@ router.get('/auth/google/callback', verifyToken, async (req, res) => {
   } catch (error) {
     console.error("--> Error during Google Auth Callback:", error.message);
     res.status(500).json({ error: "Failed to connect Google Calendar. Invalid or expired code." });
-  }
-});
-
-/**
- * Route: GET /auth/google/events
- * Description: Fetches upcoming events from the authenticated teacher's Google Calendar.
- */
-router.get('/auth/google/events', verifyToken, async (req, res) => {
-  try {
-    const teacherId = req.user.uid;
-    const { timeMin, maxResults } = req.query;
-
-    const parsedTimeMin = timeMin ? String(timeMin) : undefined;
-    const parsedMaxResults = maxResults ? parseInt(String(maxResults), 10) : undefined;
-
-    const events = await getCalendarEvents(teacherId, parsedTimeMin, parsedMaxResults);
-    
-    res.status(200).json(events);
-  } catch (error) {
-    console.error("Error fetching Google Calendar Events:", error);
-    res.status(500).json({ error: error.message || "Failed to fetch calendar events." });
   }
 });
 

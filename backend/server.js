@@ -11,10 +11,11 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use('/api/teachers', require('./routes/teachers'));
-app.use('/api/deadlines', require('./routes/deadlines'));
+// Public Routes (No JWT required)
 app.use('/', require('./routes/google.routes'));
+
+// Protected Routes (JWT automatically required for all sub-routes)
+app.use('/api', require('./routes/protected.routes'));
 
 // Import scheduler to start it
 require('./services/scheduler');

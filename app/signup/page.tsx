@@ -32,9 +32,10 @@ export default function SignupPage() {
       await createUserWithEmailAndPassword(auth, email, password);
       // Here you could also save the user's name to Firestore if needed
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to create account.");
+      const errorMessage = err instanceof Error ? err.message : "Failed to create account.";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

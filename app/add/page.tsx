@@ -39,14 +39,14 @@ export default function AddDeadlinePage() {
       };
 
       // Save to Firestore
-      const docRef = await addDoc(collection(db, "deadlines"), deadlineData);
+      await addDoc(collection(db, "deadlines"), deadlineData);
 
       // Save to local Zustand store for immediate UI update (optional, but good for UX)
       // Note: The store function addDeadline expects Omit<Deadline, "id" | "createdAt">
       addDeadline(deadlineData);
 
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error adding document: ", err);
       setError("Failed to save deadline. Please try again.");
     } finally {
@@ -148,6 +148,12 @@ export default function AddDeadlinePage() {
             </div>
           </div>
 
+          {error && (
+            <div className="text-red-500 text-sm font-medium">
+              {error}
+            </div>
+          )}
+
           <div className="flex justify-end gap-3">
             <button
               type="button"
@@ -158,10 +164,11 @@ export default function AddDeadlinePage() {
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-md hover:opacity-90 transition-all active:scale-[0.98]"
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-md hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
             >
               <Save className="h-4 w-4" />
-              Save Deadline
+              {isLoading ? "Saving..." : "Save Deadline"}
             </button>
           </div>
         </form>

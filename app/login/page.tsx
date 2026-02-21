@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { GraduationCap } from "lucide-react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
@@ -26,9 +25,10 @@ export default function LoginPage() {
       // Using registerNumber directly as email for the Firebase login function for the demo
       await signInWithEmailAndPassword(auth, registerNumber, password);
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setError(err.message || "Failed to login. Please check your credentials.");
+      const errorMessage = err instanceof Error ? err.message : "Failed to login. Please check your credentials.";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

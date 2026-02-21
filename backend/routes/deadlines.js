@@ -1,10 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
-const verifyToken = require('../middleware/authMiddleware');
 
-// All deadline routes are protected
-router.use(verifyToken);
+// All routes are protected by protected.routes.js
 
 // POST /api/deadlines/create-deadline
 router.post('/create-deadline', async (req, res) => {

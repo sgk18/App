@@ -7,11 +7,10 @@ const verifyToken = require('../middleware/authMiddleware');
 /**
  * Route: GET /auth/google
  * Description: Redirects the user to Google's OAuth 2.0 consent screen.
- * Note: Must be accessed individually by a teacher to link their own Google Account.
  */
-router.get('/', (req, res) => {
+router.get('/auth/google', (req, res) => {
   const scopes = [
-    'https://www.googleapis.com/auth/calendar' // We only need access to Calendar
+    'https://www.googleapis.com/auth/calendar' // Scope for Google Calendar reading and writing
   ];
 
   try {
@@ -32,20 +31,26 @@ router.get('/', (req, res) => {
  * Route: GET /auth/google/callback
  * Description: Handles the callback from Google OAuth, exchanges the code for tokens, 
  *              and saves the tokens to the authenticated teacher's profile in Firestore.
- * Requires: Teacher must be authenticated to associate the token with them.
  */
-router.post('/callback', verifyToken, async (req, res) => {
-  const { code } = req.body;
+router.get('/auth/google/callback', verifyToken, async (req, res) => {
+  console.log("--> GET /auth/google/callback HIT");
+
+  const code = req.query.code;
+  console.log("--> Received Code:", code);
 
   if (!code) {
+    console.error("--> Error: Authorization code missing");
     return res.status(400).json({ error: "Authorization code is required." });
   }
 
   try {
+    // Assume teacherId is available via JWT middleware
     const teacherId = req.user.uid;
+    console.log(`--> Processing OAuth for Teacher ID: ${teacherId}`);
 
     // Exchange authorization code for access and refresh tokens
     const { tokens } = await oauth2Client.getToken(code);
+    console.log("--> Token Success! Received tokens from Google.");
     
     // Save tokens securely in Firestore
     await admin.firestore().collection('teachers').doc(teacherId).update({
@@ -54,10 +59,11 @@ router.post('/callback', verifyToken, async (req, res) => {
       googleTokenExpiry: tokens.expiry_date,
       calendarConnected: true
     });
+    console.log(`--> Saved tokens into Firestore for Teacher ID: ${teacherId}`);
 
     res.status(200).json({ message: "Google Calendar connected successfully." });
   } catch (error) {
-    console.error("Error during Google Auth Callback:", error);
+    console.error("--> Error during Google Auth Callback:", error.message);
     res.status(500).json({ error: "Failed to connect Google Calendar. Invalid or expired code." });
   }
 });
@@ -65,9 +71,8 @@ router.post('/callback', verifyToken, async (req, res) => {
 /**
  * Route: GET /auth/google/events
  * Description: Fetches upcoming events from the authenticated teacher's Google Calendar.
- * Query Params (optional): timeMin (ISO string), maxResults (number)
  */
-router.get('/events', verifyToken, async (req, res) => {
+router.get('/auth/google/events', verifyToken, async (req, res) => {
   try {
     const teacherId = req.user.uid;
     const { timeMin, maxResults } = req.query;

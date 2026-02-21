@@ -19,19 +19,16 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-[#E8DCC4] rounded-[2rem] shadow-xl overflow-hidden">
         <div className="p-8 flex flex-col items-center">
           {/* Logo Section */}
-          <div className="bg-white p-4 rounded-xl shadow-sm mb-6 w-full max-w-[280px] flex justify-center items-center">
-             <div className="flex flex-col items-center">
-                <div className="flex items-center gap-2 mb-1">
-                    <GraduationCap className="h-8 w-8 text-[#1a237e]" />
-                    <span className="text-[#1a237e] font-serif font-bold text-xl tracking-wide">CHRIST</span>
-                </div>
-                <div className="text-[0.6rem] text-[#1a237e] font-semibold tracking-wider text-center uppercase">
-                    (Deemed to be University)
-                </div>
-                <div className="text-[0.5rem] text-[#1a237e]/70 tracking-widest text-center uppercase">
-                    Bangalore | Delhi NCR | Pune
-                </div>
-             </div>
+          <div className="mb-8">
+            <div className="relative w-64 h-24">
+              <Image
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/CHRIST_%28Deemed_to_be_University%29_Logo.png/640px-CHRIST_%28Deemed_to_be_University%29_Logo.png"
+                alt="Christ University Logo"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
           </div>
 
           <h1 className="text-2xl font-bold text-[#1F2232] mb-1">Welcome Back</h1>

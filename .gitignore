@@ -34,3 +34,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backend
+backend/node_modules/
+backend/.env
+backend/.env.*
+
+# global environment variables
+.env
+.env.*
+!.env.example

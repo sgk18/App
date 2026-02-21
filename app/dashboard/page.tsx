@@ -10,7 +10,6 @@ import { auth } from "@/lib/firebase";
 
 export default function DashboardPage() {
   const { deadlines, setDeadlines } = useDeadlineStore();
-  const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState("");
 
   useEffect(() => {
@@ -36,11 +35,7 @@ export default function DashboardPage() {
             }
           } catch (error) {
             console.error("Error fetching deadlines:", error);
-          } finally {
-            setIsLoading(false);
           }
-        } else {
-          setIsLoading(false);
         }
       });
 

@@ -22,39 +22,50 @@ export default function AddDeadlinePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // We must be logged in to create a deadline
-    if (!auth.currentUser) throw new Error("You must be logged in to add a deadline.");
-    const token = await auth.currentUser.getIdToken();
+    setIsLoading(true);
+    setError("");
 
-    // Create deadline object
-    const deadlineData = {
-      subject,
-      title,
-      description,
-      dueDate: new Date(dueDate).toISOString(),
-      priority
-    };
+    try {
+      // We must be logged in to create a deadline
+      if (!auth.currentUser) throw new Error("You must be logged in to add a deadline.");
+      const token = await auth.currentUser.getIdToken();
 
-    // Save to Backend API instead of direct Firestore
-    const response = await fetch("http://localhost:5000/api/deadlines/create-deadline", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(deadlineData)
-    });
+      // Create deadline object
+      const deadlineData = {
+        subject,
+        title,
+        description,
+        dueDate: new Date(dueDate).toISOString(),
+        priority
+      };
 
-    if (!response.ok) {
-      throw new Error("Failed to save deadline via API.");
+      // Save to Backend API instead of direct Firestore
+      const response = await fetch("http://localhost:5000/api/deadlines/create-deadline", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(deadlineData)
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save deadline via API.");
+      }
+
+      const responseData = await response.json();
+
+      // Save to local Zustand store for immediate UI update
+      addDeadline(responseData);
+
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      console.error(err);
+      const errorMessage = err instanceof Error ? err.message : "An error occurred";
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-
-    const responseData = await response.json();
-
-    // Save to local Zustand store for immediate UI update
-    addDeadline(responseData);
-
-    router.push("/dashboard");
   };
 
   return (

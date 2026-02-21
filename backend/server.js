@@ -14,6 +14,7 @@ app.use(express.json());
 // Routes
 app.use('/api/teachers', require('./routes/teachers'));
 app.use('/api/deadlines', require('./routes/deadlines'));
+app.use('/auth/google', require('./routes/google.routes'));
 
 // Import scheduler to start it
 require('./services/scheduler');

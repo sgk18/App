@@ -11,8 +11,9 @@ const { oauth2Client } = require('../services/googleAuth');
 router.get('/auth/google', (req, res) => {
   const { teacherId } = req.query;
 
-  if (!teacherId) {
-    return res.status(400).json({ error: "teacherId is required" });
+  // 1. Validate teacherId rigorously
+  if (!teacherId || typeof teacherId !== 'string' || teacherId.trim() === '') {
+    return res.status(400).json({ error: "teacherId is required and must be a valid string." });
   }
 
   const scopes = [
@@ -24,7 +25,7 @@ router.get('/auth/google', (req, res) => {
       access_type: 'offline', // Ensures a refresh token is returned
       prompt: 'consent', // Forces consent screen to ensure refresh token is provided
       scope: scopes,
-      state: teacherId // Crucial: send teacherId through Google flow so we get it back
+      state: teacherId.trim() // Crucial: send teacherId through Google flow so we get it back
     });
 
     res.status(200).json({ url: authorizationUrl });
@@ -38,18 +39,26 @@ router.get('/auth/google', (req, res) => {
  * Route: GET /auth/google/callback
  * Description: Handles the callback from Google OAuth, exchanges the code for tokens, 
  *              and saves the tokens to the authenticated teacher's profile in Firestore.
+ *              This is a PUBLIC route so Google can access it directly.
  */
 router.get('/auth/google/callback', async (req, res) => {
   console.log("--> GET /auth/google/callback HIT (PUBLIC ROUTE)");
 
+  // Extract from query parameters (GET)
   const code = req.query.code;
   const teacherId = req.query.state; // Extracted directly from state!
 
-  console.log("--> Received Code:", code, "for Teacher ID:", teacherId);
+  console.log("--> Received Code:", code ? "[REDACTED]" : "undefined", "for Teacher ID:", teacherId);
 
-  if (!code || !teacherId) {
-    console.error("--> Error: Authorization code or Teacher ID missing");
-    return res.status(400).json({ error: "Authorization code and matching state are required." });
+  // 2. Validate extracted variables
+  if (!code || typeof code !== 'string') {
+    console.error("--> Error: Authorization code missing or invalid");
+    return res.status(400).json({ error: "Authorization code is required." });
+  }
+
+  if (!teacherId || typeof teacherId !== 'string' || teacherId.trim() === '') {
+    console.error("--> Error: Teacher ID (state) missing or invalid");
+    return res.status(400).json({ error: "Matching state (teacherId) is required." });
   }
 
   try {
@@ -59,12 +68,16 @@ router.get('/auth/google/callback', async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code);
     console.log("--> Token Success! Received tokens from Google.");
     
+    // Set credentials temporarily for testing (optional but good practice)
+    oauth2Client.setCredentials(tokens);
+
     // Save tokens securely in Firestore
     await admin.firestore().collection('teachers').doc(teacherId).update({
       googleAccessToken: tokens.access_token,
-      googleRefreshToken: tokens.refresh_token,
+      googleRefreshToken: tokens.refresh_token, // Guaranteed by prompt: 'consent'
       googleTokenExpiry: tokens.expiry_date,
-      calendarConnected: true
+      calendarConnected: true,
+      calendarConnectedAt: admin.firestore.FieldValue.serverTimestamp() // Track insertion time
     });
     console.log(`--> Saved tokens into Firestore for Teacher ID: ${teacherId}`);
 

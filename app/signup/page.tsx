@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GraduationCap, Eye, EyeOff } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -13,10 +15,29 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/dashboard");
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      // Here you could also save the user's name to Firestore if needed
+      router.push("/dashboard");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to create account.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

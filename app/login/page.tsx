@@ -3,15 +3,34 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { GraduationCap } from "lucide-react";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function LoginPage() {
   const router = useRouter();
   const [registerNumber, setRegisterNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/dashboard");
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // In a real app we might map registerNumber to an email, or login with email directly.
+      // Assuming registerNumber is used as an email for now based on context, or user inputs email.
+      // E.g., const email = registerNumber + "@student.christuniversity.in"
+      // Using registerNumber directly as email for the Firebase login function for the demo
+      await signInWithEmailAndPassword(auth, registerNumber, password);
+      router.push("/dashboard");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to login. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -65,11 +84,18 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {error && (
+              <div className="text-red-500 text-sm text-center font-medium mt-2">
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full rounded-lg bg-[#1c3d8e] py-3.5 text-sm font-bold text-white shadow-lg hover:bg-[#153075] transition-all active:scale-[0.98] mt-4"
+              disabled={isLoading}
+              className="w-full rounded-lg bg-[#1c3d8e] py-3.5 text-sm font-bold text-white shadow-lg hover:bg-[#153075] transition-all active:scale-[0.98] mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Login
+              {isLoading ? "Logging in..." : "Login"}
             </button>
           </form>
 

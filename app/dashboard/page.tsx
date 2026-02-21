@@ -3,7 +3,7 @@
 import { useDeadlineStore } from "@/store/deadline-store";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DeadlineCard } from "@/components/deadline-card";
-import { Plus, CalendarDays, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Plus, CalendarDays, AlertCircle, CheckCircle2, CalendarPlus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
@@ -45,6 +45,21 @@ export default function DashboardPage() {
     fetchDeadlines();
   }, [setDeadlines]);
 
+  const handleGoogleCalendarLink = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/auth/google");
+      if (response.ok) {
+        const data = await response.json();
+        // Redirect the user to the Google OAuth consent screen
+        window.location.href = data.url;
+      } else {
+        console.error("Failed to get Google Auth URL");
+      }
+    } catch (error) {
+      console.error("Error linking Google Calendar:", error);
+    }
+  };
+
   const sortedDeadlines = [...deadlines].sort(
     (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
   );
@@ -61,13 +76,23 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Greeting */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Hello, {userName} 👋
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Here&apos;s an overview of your upcoming deadlines
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              Hello, {userName} 👋
+            </h1>
+            <p className="mt-1 text-muted-foreground">
+              Here&apos;s an overview of your upcoming deadlines
+            </p>
+          </div>
+          
+          <button
+            onClick={handleGoogleCalendarLink}
+            className="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-zinc-900 border border-border px-4 py-2.5 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground transition-all"
+          >
+            <CalendarPlus className="h-4 w-4 text-blue-500" />
+            Link Google Calendar
+          </button>
         </div>
 
         {/* Stats */}

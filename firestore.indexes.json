@@ -1,23 +1,4 @@
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
-
-admin.initializeApp();
-
-// Assign role when a new user is created
-exports.setUserRole = functions.auth.user().onCreate(async (user) => {
-  // Default role
-  let role = "student";
-
-  // If email contains faculty keyword, make faculty
-  if (user.email && user.email.includes("faculty")) {
-    role = "faculty";
-  }
-
-  await admin.auth().setCustomUserClaims(user.uid,
-  { role
-  });
-
-  console.log(`Assigned ${role
-  } role to ${user.email
-  }`);
-});
+{
+  "indexes": [],
+  "fieldOverrides": []
+}

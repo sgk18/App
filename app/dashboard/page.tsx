@@ -3,12 +3,52 @@
 import { useDeadlineStore } from "@/store/deadline-store";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DeadlineCard } from "@/components/deadline-card";
-import { mockUser } from "@/lib/mock-data";
 import { Plus, CalendarDays, AlertCircle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { auth } from "@/lib/firebase";
 
 export default function DashboardPage() {
-  const { deadlines } = useDeadlineStore();
+  const { deadlines, setDeadlines } = useDeadlineStore();
+  const [isLoading, setIsLoading] = useState(true);
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    const fetchDeadlines = async () => {
+      // Firebase auth state might take a moment to initialize
+      const unsubscribe = auth.onAuthStateChanged(async (user) => {
+        if (user) {
+          try {
+            const token = await user.getIdToken();
+            setUserName(user.email?.split('@')[0] || "Professor");
+            
+            const response = await fetch(`http://localhost:5000/api/deadlines/${user.uid}`, {
+              headers: {
+                "Authorization": `Bearer ${token}`
+              }
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              setDeadlines(data);
+            } else {
+              console.error("Failed to fetch deadlines from backend");
+            }
+          } catch (error) {
+            console.error("Error fetching deadlines:", error);
+          } finally {
+            setIsLoading(false);
+          }
+        } else {
+          setIsLoading(false);
+        }
+      });
+
+      return () => unsubscribe();
+    };
+
+    fetchDeadlines();
+  }, [setDeadlines]);
 
   const sortedDeadlines = [...deadlines].sort(
     (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
@@ -28,7 +68,7 @@ export default function DashboardPage() {
         {/* Greeting */}
         <div>
           <h1 className="text-3xl font-bold text-foreground">
-            Hello, {mockUser.name} 👋
+            Hello, {userName} 👋
           </h1>
           <p className="mt-1 text-muted-foreground">
             Here&apos;s an overview of your upcoming deadlines

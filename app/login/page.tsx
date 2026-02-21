@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { GraduationCap } from "lucide-react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();

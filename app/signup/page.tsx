@@ -29,8 +29,30 @@ export default function SignupPage() {
     setError("");
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      // Here you could also save the user's name to Firestore if needed
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Get the Firebase ID token for secure backend communication
+      const token = await user.getIdToken();
+
+      // Register the teacher in the MCP Backend
+      const response = await fetch("http://localhost:5000/api/teachers/register-teacher", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: name,
+          email: email,
+          department: "Faculty" // Placeholder or add a department field in UI
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to register teacher profile on the backend.");
+      }
+
       router.push("/dashboard");
     } catch (err: any) {
       console.error(err);

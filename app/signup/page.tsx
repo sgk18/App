@@ -54,9 +54,22 @@ export default function SignupPage() {
       }
 
       router.push("/dashboard");
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error(err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to create account.";
+      let errorMessage = err instanceof Error ? err.message : "Failed to create account.";
+
+      if (err?.code === "auth/email-already-in-use") {
+        errorMessage = "This email is already registered. Please sign in instead.";
+      } else if (err?.code === "auth/weak-password") {
+        errorMessage = "Password should be at least 6 characters.";
+      } else if (err?.code === "auth/invalid-email") {
+        errorMessage = "Please enter a valid email address.";
+      } else if (errorMessage === "Failed to fetch") {
+        errorMessage = "Network error: Unable to reach the server. Please check your connection or wait a moment while the server starts.";
+      } else if (errorMessage.startsWith("Firebase: ")) {
+        errorMessage = "Failed to create account. Please try again.";
+      }
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);

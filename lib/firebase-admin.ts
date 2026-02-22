@@ -51,7 +51,14 @@ const initFirebaseAdmin = () => {
 
 initFirebaseAdmin();
 
-const db = admin.firestore();
-const auth = admin.auth();
+let db: admin.firestore.Firestore;
+let auth: admin.auth.Auth;
+
+try {
+  db = admin.firestore();
+  auth = admin.auth();
+} catch (error) {
+  console.error('[firebase-admin] Failed to initialize Firestore/Auth:', error);
+}
 
 export { db, auth, admin };

@@ -11,7 +11,8 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   
   headers.set('Content-Type', 'application/json');
 
-  const res = await fetch(`http://localhost:5000${url}`, { ...options, headers });
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+  const res = await fetch(`${backendUrl}${url}`, { ...options, headers });
   
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));

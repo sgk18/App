@@ -84,8 +84,9 @@ router.get('/auth/google/callback', async (req, res) => {
     }, { merge: true });
     console.log(`--> Saved tokens into Firestore for Teacher ID: ${teacherId}`);
 
-    // Redirect back to the frontend settings page with a success flag
-    res.redirect('http://localhost:3000/settings?calendar_connected=true');
+    // Redirect back to the frontend settings page dynamically based on environment
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    res.redirect(`${frontendUrl}/settings?calendar_connected=true`);
   } catch (error) {
     console.error("--> Error during Google Auth Callback. Message:", error.message);
     let errorDump = "Raw Error: " + error.message;

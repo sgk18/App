@@ -19,8 +19,8 @@ router.use('/teachers', require('./teachers'));
 // 2. Deadlines API ("/api/deadlines")
 router.use('/deadlines', require('./deadlines'));
 
-// 3. Google API Protected Endpoints
-// We can move the `/auth/google/events` route here for cleaner structure
-router.use('/google', require('./google.protected.routes'));
+// 3. Calendar API ("/api/calendar")
+// Handles Google Calendar fetching, selection, and events.
+router.use('/calendar', require('./calendar.routes'));
 
 module.exports = router;

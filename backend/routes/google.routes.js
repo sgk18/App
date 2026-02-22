@@ -84,7 +84,8 @@ router.get('/auth/google/callback', async (req, res) => {
     }, { merge: true });
     console.log(`--> Saved tokens into Firestore for Teacher ID: ${teacherId}`);
 
-    res.status(200).json({ message: "Google Calendar connected successfully." });
+    // Redirect back to the frontend settings page with a success flag
+    res.redirect('http://localhost:3000/settings?calendar_connected=true');
   } catch (error) {
     console.error("--> Error during Google Auth Callback. Message:", error.message);
     let errorDump = "Raw Error: " + error.message;

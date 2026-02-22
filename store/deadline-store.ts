@@ -6,6 +6,7 @@ import { generateId } from "@/lib/utils";
 
 interface DeadlineState {
   deadlines: Deadline[];
+  setDeadlines: (deadlines: Deadline[]) => void;
   addDeadline: (deadline: Omit<Deadline, "id" | "createdAt">) => void;
   updateDeadline: (id: string, deadline: Partial<Deadline>) => void;
   deleteDeadline: (id: string) => void;
@@ -15,7 +16,8 @@ interface DeadlineState {
 export const useDeadlineStore = create<DeadlineState>()(
   persist(
     (set, get) => ({
-      deadlines: mockDeadlines,
+      deadlines: [],
+      setDeadlines: (deadlines) => set({ deadlines }),
       addDeadline: (deadline) =>
         set((state) => ({
           deadlines: [

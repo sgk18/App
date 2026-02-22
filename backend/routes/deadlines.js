@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/firebase');
+const { createCalendarEvent } = require('../services/calendar.service');
 
 // All routes are protected by protected.routes.js
 
@@ -33,6 +34,26 @@ router.post('/create-deadline', async (req, res) => {
 
     const docRef = await db.collection('deadlines').add(deadlineData);
     
+    // Attempt to sync the deadline to their selected Google Calendar
+    try {
+      const eventData = {
+        summary: `[Deadline] ${title}`,
+        description: `${courseName ? `Course: ${courseName}\n` : ''}${description || 'No description provided.'}`,
+        start: { dateTime: new Date(dueDate).toISOString() },
+        end: { dateTime: new Date(new Date(dueDate).getTime() + 60 * 60 * 1000).toISOString() } // 1 hour duration
+      };
+      
+      const eventId = await createCalendarEvent(teacherId, eventData);
+      
+      // Update the deadline to indicate it was synced
+      await docRef.update({ calendarSynced: true, googleEventId: eventId });
+      deadlineData.calendarSynced = true;
+      deadlineData.googleEventId = eventId;
+    } catch (calendarError) {
+      console.warn(`[Deadlines] Skipping calendar sync for ${teacherId}:`, calendarError.message);
+      // We don't fail the deadline creation just because the calendar isn't linked
+    }
+
     res.status(201).json({ 
       message: 'Deadline created successfully', 
       id: docRef.id,

@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const { db } = require('../config/firebase');
 const { sendReminderEmail } = require('./emailService');
+const { syncExternalEvents } = require('./calendar.service');
 
 // Calculates the true hours remaining until the deadline
 const getHoursRemaining = (dueDate) => {
@@ -60,5 +61,23 @@ cron.schedule('0 * * * *', async () => {
     });
   } catch (error) {
     console.error('Error running scheduler:', error);
+  }
+});
+
+// Scheduler running every 6 hours to sync third-party calendar events
+cron.schedule('0 */6 * * *', async () => {
+  console.log('Running Google Calendar auto-sync scheduler...');
+  try {
+    const teachersSnapshot = await db.collection('teachers').where('autoSyncEnabled', '==', true).get();
+    const syncPromises = [];
+    
+    teachersSnapshot.forEach(doc => {
+      syncPromises.push(syncExternalEvents(doc.id));
+    });
+    
+    await Promise.all(syncPromises);
+    console.log(`[Scheduler] Processed external calendar sync for ${syncPromises.length} teachers.`);
+  } catch (error) {
+    console.error('Error running calendar sync scheduler:', error);
   }
 });

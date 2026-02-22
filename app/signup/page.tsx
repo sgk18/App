@@ -5,8 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GraduationCap, Eye, EyeOff } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -15,52 +13,10 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      // Get the Firebase ID token for secure backend communication
-      const token = await user.getIdToken();
-
-      // Register the teacher in the MCP Backend
-      const response = await fetch("http://localhost:5000/api/teachers/register-teacher", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: name,
-          email: email,
-          department: "Faculty" // Placeholder or add a department field in UI
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to register teacher profile on the backend.");
-      }
-
-      router.push("/dashboard");
-    } catch (err: unknown) {
-      console.error(err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to create account.";
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+    router.push("/dashboard");
   };
 
   return (
@@ -165,18 +121,11 @@ export default function SignupPage() {
               />
             </div>
 
-            {error && (
-              <div className="text-red-500 text-sm font-medium text-center">
-                {error}
-              </div>
-            )}
-
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-md hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground shadow-md hover:opacity-90 transition-all active:scale-[0.98]"
             >
-              {isLoading ? "Creating Account..." : "Create Account"}
+              Create Account
             </button>
           </form>
 

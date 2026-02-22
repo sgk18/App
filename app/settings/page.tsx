@@ -1,87 +1,18 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useThemeStore } from "@/store/theme-store";
-import { useCalendarStore } from "@/store/calendar-store";
+import { useSettingsStore } from "@/store/settings-store";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Moon, Sun, Calendar, LogOut, Shield, Bell, ChevronDown } from "lucide-react";
-import toast from "react-hot-toast";
-import { auth } from "@/lib/firebase";
-import { User } from "firebase/auth";
+import { Moon, Sun, Calendar, LogOut, Shield, Bell } from "lucide-react";
 
-function SettingsContent() {
+export default function SettingsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { isDark, toggleTheme } = useThemeStore();
-  const { calendars, isLoadingCalendars, fetchCalendars, selectCalendar } = useCalendarStore();
-
-  const [selectedCalendarId, setSelectedCalendarId] = useState<string>("");
-  const [isLinking, setIsLinking] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    // Handle the redirect success from OAuth
-    if (searchParams.get("calendar_connected") === "true") {
-      toast.success("Google Calendar connected successfully!", {
-        duration: 4000,
-        icon: '🎉'
-      });
-      // Remove query param to clean up URL
-      router.replace("/settings");
-    }
-
-    // Always fetch available calendars on load
-    fetchCalendars();
-  }, [searchParams, router, fetchCalendars]);
+  const { googleCalendarSync, toggleGoogleCalendarSync } = useSettingsStore();
 
   const handleLogout = () => {
     router.push("/");
-  };
-
-  const handleCalendarChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const calendarId = e.target.value;
-    setSelectedCalendarId(calendarId);
-    
-    if (calendarId) {
-      setIsLinking(true);
-      try {
-        await selectCalendar(calendarId);
-        toast.success("Calendar successfully linked for syncing!");
-      } catch (error) {
-        console.error("Failed to link calendar:", error);
-        toast.error("Failed to link calendar. Please try again.");
-      } finally {
-        setIsLinking(false);
-      }
-    }
-  };
-
-  const handleGoogleCalendarLink = async () => {
-    try {
-      if (!user) {
-        console.error("User not logged in");
-        return;
-      }
-      
-      const response = await fetch(`http://localhost:5000/auth/google?teacherId=${user.uid}`);
-      if (response.ok) {
-        const data = await response.json();
-        // Redirect the user to the Google OAuth consent screen
-        window.location.href = data.url;
-      } else {
-        console.error("Failed to get Google Auth URL");
-      }
-    } catch (error) {
-      console.error("Error linking Google Calendar:", error);
-    }
   };
 
   return (
@@ -132,55 +63,38 @@ function SettingsContent() {
 
         {/* Integrations */}
         <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+          <div className="px-6 py-4 border-b border-border">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               Integrations
             </h2>
           </div>
           <div className="px-6 py-5 space-y-5">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
-                <div className="flex items-center justify-center h-10 w-10 mt-1 rounded-xl bg-muted text-foreground">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-muted text-foreground">
                   <Calendar className="h-5 w-5" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    Google Calendar Sync
+                    Sync with Google Calendar
                   </p>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Automatically sync deadlines and fetch external events.
+                  <p className="text-xs text-muted-foreground">
+                    Automatically sync deadlines to your calendar
                   </p>
-                  
-                  {isLoadingCalendars ? (
-                    <div className="text-xs text-muted-foreground animate-pulse">Loading calendars...</div>
-                  ) : calendars.length > 0 ? (
-                    <div className="relative">
-                      <select 
-                        value={selectedCalendarId}
-                        onChange={handleCalendarChange}
-                        disabled={isLinking}
-                        className="w-full sm:w-64 appearance-none rounded-xl border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
-                      >
-                        <option value="" disabled>Select a calendar to link...</option>
-                        {calendars.map((cal) => (
-                          <option key={cal.id} value={cal.id}>
-                            {cal.summary} {cal.primary ? "(Primary)" : ""}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleGoogleCalendarLink}
-                      className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-                    >
-                      Connect Google Calendar
-                    </button>
-                  )}
-                  {isLinking && <p className="text-xs text-primary mt-2">Linking calendar...</p>}
                 </div>
               </div>
+              <button
+                onClick={toggleGoogleCalendarSync}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                  googleCalendarSync ? "bg-primary" : "bg-muted"
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                    googleCalendarSync ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
             </div>
 
             <div className="flex items-center justify-between border-t border-border pt-5">
@@ -237,13 +151,5 @@ function SettingsContent() {
         </div>
       </div>
     </DashboardLayout>
-  );
-}
-
-export default function SettingsPage() {
-  return (
-    <Suspense fallback={<DashboardLayout><div className="flex h-screen items-center justify-center animate-pulse text-muted-foreground">Loading settings...</div></DashboardLayout>}>
-      <SettingsContent />
-    </Suspense>
   );
 }

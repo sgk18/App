@@ -6,7 +6,6 @@ import { useDeadlineStore } from "@/store/deadline-store";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Priority } from "@/types";
 import { CalendarPlus, Save } from "lucide-react";
-import { auth } from "@/lib/firebase";
 
 export default function AddDeadlinePage() {
   const router = useRouter();
@@ -17,55 +16,17 @@ export default function AddDeadlinePage() {
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError("");
-
-    try {
-      // We must be logged in to create a deadline
-      if (!auth.currentUser) throw new Error("You must be logged in to add a deadline.");
-      const token = await auth.currentUser.getIdToken();
-
-      // Create deadline object
-      const deadlineData = {
-        subject,
-        title,
-        description,
-        dueDate: new Date(dueDate).toISOString(),
-        priority
-      };
-
-      // Save to Backend API instead of direct Firestore
-      const response = await fetch("http://localhost:5000/api/deadlines/create-deadline", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(deadlineData)
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save deadline via API.");
-      }
-
-      const responseData = await response.json();
-
-      // Save to local Zustand store for immediate UI update
-      addDeadline(responseData);
-
-      router.push("/dashboard");
-    } catch (err: unknown) {
-      console.error(err);
-      const errorMessage = err instanceof Error ? err.message : "An error occurred";
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+    addDeadline({
+      subject,
+      title,
+      description,
+      dueDate: new Date(dueDate).toISOString(),
+      priority,
+    });
+    router.push("/dashboard");
   };
 
   return (
@@ -160,12 +121,6 @@ export default function AddDeadlinePage() {
                 </select>
               </div>
             </div>
-
-            {error && (
-              <div className="text-red-500 text-sm font-medium">
-                {error}
-              </div>
-            )}
           </div>
 
           <div className="flex justify-end gap-3">
@@ -178,11 +133,10 @@ export default function AddDeadlinePage() {
             </button>
             <button
               type="submit"
-              disabled={isLoading}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-md hover:opacity-90 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-md hover:opacity-90 transition-all active:scale-[0.98]"
             >
               <Save className="h-4 w-4" />
-              {isLoading ? "Saving..." : "Save Deadline"}
+              Save Deadline
             </button>
           </div>
         </form>

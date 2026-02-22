@@ -21,6 +21,7 @@ export async function GET(
       .where('teacherId', '==', params.userId)
       .get();
       
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const deadlines: any[] = [];
     snapshot.forEach(doc => {
       deadlines.push({ id: doc.id, ...doc.data() });

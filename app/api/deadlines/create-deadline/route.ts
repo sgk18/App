@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Title and Due Date are required' }, { status: 400 });
     }
 
-    const deadlineData: any = {
+    const deadlineData = {
       title,
       courseName: courseName || '',
       description: description || '',
@@ -51,9 +51,11 @@ export async function POST(req: NextRequest) {
       // Update the deadline to indicate it was synced
       await docRef.update({ calendarSynced: true, googleEventId: eventId });
       deadlineData.calendarSynced = true;
-      deadlineData.googleEventId = eventId;
-    } catch (calendarError: any) {
-      console.warn(`[Deadlines] Skipping calendar sync for ${teacherId}:`, calendarError.message);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (deadlineData as any).googleEventId = eventId;
+    } catch (calendarError: unknown) {
+      const errorMsg = calendarError instanceof Error ? calendarError.message : String(calendarError);
+      console.warn(`[Deadlines] Skipping calendar sync for ${teacherId}:`, errorMsg);
       // We don't fail the deadline creation just because the calendar isn't linked
     }
 
@@ -62,8 +64,9 @@ export async function POST(req: NextRequest) {
       id: docRef.id,
       ...deadlineData
     }, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : 'Failed to create deadline';
     console.error('Error creating deadline:', error);
-    return NextResponse.json({ error: 'Failed to create deadline' }, { status: 500 });
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { admin, db } from './firebase-admin';
+import { db } from './firebase-admin';
 
 // Initialize the base Google OAuth2 Client
 export const oauth2Client = new google.auth.OAuth2(
@@ -47,7 +47,7 @@ export const getAuthenticatedClient = async (teacherId: string) => {
 
     // Listen to token refresh events securely to save them back into Firestore automatically
     client.on('tokens', async (tokens) => {
-      const updates: any = {};
+      const updates: Record<string, string | number> = {};
       if (tokens.access_token) {
         updates.googleAccessToken = tokens.access_token;
       }
@@ -70,9 +70,9 @@ export const getAuthenticatedClient = async (teacherId: string) => {
 
     return client;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
-    console.error(`Error retrieving authenticated client for teacher ${teacherId}:`, error.message);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`Error retrieving authenticated client for teacher ${teacherId}:`, errorMsg);
     throw error;
   }
 };

@@ -40,7 +40,8 @@ export default function AddDeadlinePage() {
       };
 
       // Save to Backend API instead of direct Firestore
-      const response = await fetch("http://localhost:5000/api/deadlines/create-deadline", {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+      const response = await fetch(`${backendUrl}/api/deadlines/create-deadline`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

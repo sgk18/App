@@ -16,7 +16,48 @@ export default function SignupPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/dashboard");
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Get the Firebase ID token for secure backend communication
+      const token = await user.getIdToken();
+
+      // Register the teacher in the MCP Backend
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+      const response = await fetch(`${backendUrl}/api/teachers/register-teacher`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: name,
+          email: email,
+          department: "Faculty" // Placeholder or add a department field in UI
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to register teacher profile on the backend.");
+      }
+
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      console.error(err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to create account.";
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

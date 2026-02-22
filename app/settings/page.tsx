@@ -15,6 +15,45 @@ export default function SettingsPage() {
     router.push("/");
   };
 
+  const handleCalendarChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const calendarId = e.target.value;
+    setSelectedCalendarId(calendarId);
+    
+    if (calendarId) {
+      setIsLinking(true);
+      try {
+        await selectCalendar(calendarId);
+        toast.success("Calendar successfully linked for syncing!");
+      } catch (error) {
+        console.error("Failed to link calendar:", error);
+        toast.error("Failed to link calendar. Please try again.");
+      } finally {
+        setIsLinking(false);
+      }
+    }
+  };
+
+  const handleGoogleCalendarLink = async () => {
+    try {
+      if (!user) {
+        console.error("User not logged in");
+        return;
+      }
+      
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+      const response = await fetch(`${backendUrl}/auth/google?teacherId=${user.uid}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Redirect the user to the Google OAuth consent screen
+        window.location.href = data.url;
+      } else {
+        console.error("Failed to get Google Auth URL");
+      }
+    } catch (error) {
+      console.error("Error linking Google Calendar:", error);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-2xl mx-auto space-y-8">

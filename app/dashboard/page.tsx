@@ -8,7 +8,73 @@ import { Plus, CalendarDays, AlertCircle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {
-  const { deadlines } = useDeadlineStore();
+  const { deadlines, setDeadlines } = useDeadlineStore();
+  const { events, fetchEvents, isLoadingEvents } = useCalendarStore();
+  const [userName, setUserName] = useState("");
+
+  useEffect(() => {
+    let unsubscribe: () => void;
+    
+    const fetchAllData = async () => {
+      unsubscribe = auth.onAuthStateChanged(async (user) => {
+        if (user) {
+          try {
+            const token = await user.getIdToken();
+            setUserName(user.email?.split('@')[0] || "Professor");
+            
+            // 1. Fetch internal deadlines
+            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+            const response = await fetch(`${backendUrl}/api/deadlines/${user.uid}`, {
+              headers: {
+                "Authorization": `Bearer ${token}`
+              }
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              setDeadlines(data);
+            } else {
+              console.error("Failed to fetch deadlines from backend");
+            }
+            
+            // 2. Fetch external Google Calendar events
+            fetchEvents();
+            
+          } catch (error) {
+            console.error("Error fetching dashboard data:", error);
+          }
+        }
+      });
+    };
+
+    fetchAllData();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [setDeadlines, fetchEvents]);
+
+  const handleGoogleCalendarLink = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        console.error("User not logged in");
+        return;
+      }
+      
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+      const response = await fetch(`${backendUrl}/auth/google?teacherId=${user.uid}`);
+      if (response.ok) {
+        const data = await response.json();
+        // Redirect the user to the Google OAuth consent screen
+        window.location.href = data.url;
+      } else {
+        console.error("Failed to get Google Auth URL");
+      }
+    } catch (error) {
+      console.error("Error linking Google Calendar:", error);
+    }
+  };
 
   const sortedDeadlines = [...deadlines].sort(
     (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()

@@ -8,6 +8,8 @@ export interface Deadline {
   dueDate: string;
   priority: Priority;
   createdAt: string;
+  isGoogleEvent?: boolean;
+  htmlLink?: string;
 }
 
 export interface User {

@@ -36,8 +36,7 @@ export default function SignupPage() {
       const token = await user.getIdToken();
 
       // Register the teacher in the MCP Backend
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
-      const response = await fetch(`${backendUrl}/api/teachers/register-teacher`, {
+      const response = await fetch(`/api/teachers/register-teacher`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -11,8 +11,7 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   
   headers.set('Content-Type', 'application/json');
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
-  const res = await fetch(`${backendUrl}${url}`, { ...options, headers });
+  const res = await fetch(url, { ...options, headers });
   
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
@@ -62,6 +61,7 @@ export const useCalendarStore = create<CalendarState>((set) => ({
     try {
       const data = await fetchWithAuth('/api/calendar/list');
       set({ calendars: data.calendars || [], isLoadingCalendars: false });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error fetching Google Calendars:', error);
       set({ 
@@ -80,6 +80,7 @@ export const useCalendarStore = create<CalendarState>((set) => ({
       });
       // We don't need to update state immediately, the backend handles the save.
       // But we could optionally refresh the calendar list here if needed.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error saving linked calendar:', error);
       set({ error: error.response?.data?.error || 'Failed to link calendar.' });
@@ -92,6 +93,7 @@ export const useCalendarStore = create<CalendarState>((set) => ({
     try {
       const data = await fetchWithAuth('/api/calendar/events');
       set({ events: data.events || [], isLoadingEvents: false });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Error fetching Google Events:', error);
       // It's normal to have a 400 if they haven't linked a calendar yet

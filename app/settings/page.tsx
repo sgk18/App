@@ -71,8 +71,7 @@ function SettingsContent() {
         return;
       }
       
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
-      const response = await fetch(`${backendUrl}/auth/google?teacherId=${user.uid}`);
+      const response = await fetch(`/api/auth/google?teacherId=${user.uid}`);
       if (response.ok) {
         const data = await response.json();
         // Redirect the user to the Google OAuth consent screen

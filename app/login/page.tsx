@@ -34,7 +34,7 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
     const provider = new GoogleAuthProvider();
-    
+
     try {
       await signInWithPopup(auth, provider);
       router.push("/dashboard");
@@ -78,6 +78,7 @@ export default function LoginPage() {
                 value={registerNumber}
                 onChange={(e) => setRegisterNumber(e.target.value)}
                 placeholder="Enter your register number"
+                required
                 className="w-full rounded-lg border-none bg-white px-4 py-3.5 text-sm text-[#1F2232] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1c3d8e]"
               />
             </div>
@@ -93,6 +94,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
+                  required
                   className="w-full rounded-lg border-none bg-white px-4 py-3.5 pr-12 text-sm text-[#1F2232] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1c3d8e]"
                 />
               </div>
@@ -128,9 +130,9 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full rounded-lg bg-[#1c3d8e] py-3.5 text-sm font-bold text-white shadow-lg hover:bg-[#153075] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-             <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
-             </svg>
+            <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z" />
+            </svg>
             Continue with Google
           </button>
         </div>

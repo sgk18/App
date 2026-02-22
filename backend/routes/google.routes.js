@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
+const fs = require('fs');
+const path = require('path');
 const { oauth2Client } = require('../services/googleAuth');
 
 /**
@@ -72,18 +74,33 @@ router.get('/auth/google/callback', async (req, res) => {
     oauth2Client.setCredentials(tokens);
 
     // Save tokens securely in Firestore
-    await admin.firestore().collection('teachers').doc(teacherId).update({
+    // Using .set({ ... }, { merge: true }) ensures the document is created if it does not yet exist.
+    await admin.firestore().collection('teachers').doc(teacherId).set({
       googleAccessToken: tokens.access_token,
       googleRefreshToken: tokens.refresh_token, // Guaranteed by prompt: 'consent'
       googleTokenExpiry: tokens.expiry_date,
       calendarConnected: true,
       calendarConnectedAt: admin.firestore.FieldValue.serverTimestamp() // Track insertion time
-    });
+    }, { merge: true });
     console.log(`--> Saved tokens into Firestore for Teacher ID: ${teacherId}`);
 
     res.status(200).json({ message: "Google Calendar connected successfully." });
   } catch (error) {
-    console.error("--> Error during Google Auth Callback:", error.message);
+    console.error("--> Error during Google Auth Callback. Message:", error.message);
+    let errorDump = "Raw Error: " + error.message;
+
+    if (error.response && error.response.data) {
+      errorDump = "Google API Error Details: " + JSON.stringify(error.response.data, null, 2);
+      console.error("-->", errorDump);
+    } else {
+      errorDump = "Full Error Stack: " + error.stack;
+      console.error("-->", errorDump);
+    }
+
+    try {
+      fs.writeFileSync(path.join(__dirname, '../oauth-error-dump.txt'), new Date().toISOString() + "\n" + errorDump + "\n\n", { flag: 'a' });
+    } catch(e) {}
+
     res.status(500).json({ error: "Failed to connect Google Calendar. Invalid or expired code." });
   }
 });

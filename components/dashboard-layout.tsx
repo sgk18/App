@@ -1,11 +1,25 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { auth } from "@/lib/firebase";
+import { User } from "firebase/auth";
 import { Sidebar } from "./sidebar";
 import { ThemeToggle } from "./theme-toggle";
-import { mockUser } from "@/lib/mock-data";
 import { Bell } from "lucide-react";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const userName = user?.displayName || user?.email?.split("@")[0] || "Professor";
+  const userInitial = userName.charAt(0).toUpperCase();
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
@@ -28,10 +42,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
             <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                {mockUser.name.charAt(0)}
+                {userInitial}
               </div>
               <span className="hidden sm:block text-sm font-medium text-foreground">
-                {mockUser.name}
+                {userName}
               </span>
             </div>
           </div>

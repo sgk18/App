@@ -10,6 +10,24 @@ const getHoursRemaining = (dueDate: string) => {
   return (due.getTime() - now.getTime()) / (1000 * 60 * 60);
 };
 
+interface DeadlineData {
+  id: string;
+  dueDate: string;
+  title: string;
+  teacherId: string;
+  reminderSent?: {
+    sixHour?: boolean;
+    oneDay?: boolean;
+    threeDay?: boolean;
+    sevenDay?: boolean;
+  };
+}
+
+interface TeacherData {
+  email: string;
+  name: string;
+}
+
 export async function GET(req: NextRequest) {
   // 1. Secure the endpoint using Vercel's Cron Secret Header
   const authHeader = req.headers.get('authorization');
@@ -23,13 +41,14 @@ export async function GET(req: NextRequest) {
     
     // Process deadline email reminders
     const reminderPromises = deadlinesSnapshot.docs.map(async (doc) => {
-      const deadline = { id: doc.id, ...doc.data() } as any;
+      const data = doc.data();
+      const deadline = { id: doc.id, ...data } as unknown as DeadlineData;
       const hoursRemaining = getHoursRemaining(deadline.dueDate);
 
       // Skip past deadlines
       if (hoursRemaining < 0) return;
 
-      let reminderToSent = null;
+      let reminderToSent: 'sixHour' | 'oneDay' | 'threeDay' | 'sevenDay' | null = null;
 
       if (hoursRemaining <= 6 && hoursRemaining > 0 && !deadline.reminderSent?.sixHour) {
         reminderToSent = 'sixHour';
@@ -44,12 +63,13 @@ export async function GET(req: NextRequest) {
       if (reminderToSent) {
         const teacherDoc = await db.collection('teachers').doc(deadline.teacherId).get();
         if (teacherDoc.exists) {
-          const teacher = teacherDoc.data() as any;
+          const teacher = teacherDoc.data() as unknown as TeacherData;
           
           const emailSent = await sendReminderEmail(
             teacher.email, 
             teacher.name, 
-            deadline, 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            deadline as any, 
             reminderToSent
           );
 
@@ -75,9 +95,9 @@ export async function GET(req: NextRequest) {
     console.log(`[Scheduler] Processed external calendar sync for ${syncPromises.length} teachers.`);
 
     return NextResponse.json({ success: true, message: "Cron jobs executed successfully" }, { status: 200 });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : "Internal Server Error";
     console.error('CRON execution failed:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

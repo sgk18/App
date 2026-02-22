@@ -11,7 +11,7 @@ export async function verifyToken(req: NextRequest) {
   try {
     const decodedToken = await auth.verifyIdToken(token);
     return { user: decodedToken, status: 200 };
-  } catch (error) {
+  } catch {
     return { error: "Unauthorized access", status: 403 };
   }
 }

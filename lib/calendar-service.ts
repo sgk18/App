@@ -29,10 +29,21 @@ export const fetchCalendars = async (teacherId: string) => {
   }
 };
 
+interface CalendarEventData {
+  summary: string;
+  description?: string;
+  start: {
+    dateTime: string;
+  };
+  end: {
+    dateTime: string;
+  };
+}
+
 /**
  * Creates an event on the teacher's selected linked calendar.
  */
-export const createCalendarEvent = async (teacherId: string, eventData: any) => {
+export const createCalendarEvent = async (teacherId: string, eventData: CalendarEventData) => {
   try {
     const teacherDoc = await db.collection('teachers').doc(teacherId).get();
     const linkedCalendarId = teacherDoc.data()?.linkedCalendarId;

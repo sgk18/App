@@ -4,10 +4,18 @@ if (process.env.SENDGRID_API_KEY) {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 }
 
+interface DeadlineData {
+  title: string;
+  courseName?: string;
+  dueDate: string;
+  description?: string;
+  priority: string;
+}
+
 export const sendReminderEmail = async (
   teacherEmail: string, 
   teacherName: string, 
-  deadline: any, 
+  deadline: DeadlineData, 
   reminderType: string
 ) => {
   if (!process.env.SENDGRID_API_KEY) {

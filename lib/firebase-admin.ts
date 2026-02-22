@@ -26,8 +26,9 @@ const initFirebaseAdmin = () => {
       });
       console.log(`[firebase-admin] Initialized via environment for project: ${projectId}`);
       return;
-    } catch (envError: any) {
-      console.warn(`[firebase-admin] Environment init failed: ${envError.message}`);
+    } catch (envError: unknown) {
+      const errorMsg = envError instanceof Error ? envError.message : String(envError);
+      console.warn(`[firebase-admin] Environment init failed: ${errorMsg}`);
     }
   }
 
@@ -41,8 +42,9 @@ const initFirebaseAdmin = () => {
       });
       console.log('[firebase-admin] Initialized via serviceAccountKey.json fallback');
       return;
-    } catch (saError: any) {
-      console.error(`[firebase-admin] Fallback init failed: ${saError.message}`);
+    } catch (saError: unknown) {
+      const errorMsg = saError instanceof Error ? saError.message : String(saError);
+      console.error(`[firebase-admin] Fallback init failed: ${errorMsg}`);
     }
   }
 

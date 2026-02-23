@@ -1,6 +1,9 @@
 import { google } from 'googleapis';
 import { admin, db } from './firebase-admin';
 import { getAuthenticatedClient } from './google-auth';
+import { getAccessToken } from './outlook-auth';
+import { syncICalFeeds } from './ical-service';
+import axios from 'axios';
 
 /**
  * Fetches the user's Google Calendars so they can select which one to link.
@@ -81,44 +84,36 @@ export const createCalendarEvent = async (teacherId: string, eventData: Calendar
 };
 
 /**
- * Fetches upcoming events from the teacher's explicitly linked calendar.
+ * Fetches unified upcoming events from the teacher's externalEvents subcollection in Firestore.
  */
-export const fetchCalendarEvents = async (teacherId: string, timeMin = new Date().toISOString(), maxResults = 50) => {
+export const fetchCalendarEvents = async (teacherId: string, timeMin = new Date().toISOString(), _maxResults = 50) => {
   try {
-    const teacherDoc = await db.collection('teachers').doc(teacherId).get();
-    const linkedCalendarId = teacherDoc.data()?.linkedCalendarId;
+    // We now pull from the Firestore collection which aggregates Google, Outlook, and iCal
+    const collectionRef = db.collection('teachers').doc(teacherId).collection('externalEvents');
+    const snapshot = await collectionRef
+      .where('start', '>=', timeMin)
+      .orderBy('start')
+      .limit(1000) // Increased from 100
+      .get();
 
-    if (!linkedCalendarId) {
-      throw new Error("No Google Calendar mapped. Please select a calendar in settings.");
-    }
-
-    const auth = await getAuthenticatedClient(teacherId);
-    const calendarAPI = google.calendar({ version: "v3", auth });
-
-    const response = await calendarAPI.events.list({
-      calendarId: linkedCalendarId,
-      timeMin: timeMin,
-      maxResults: maxResults,
-      singleEvents: true,
-      orderBy: 'startTime',
+    const events = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        eventId: doc.id,
+        summary: data.summary,
+        description: data.description || '',
+        start: data.start,
+        end: data.end || '',
+        htmlLink: data.htmlLink || '',
+        source: data.source || 'external'
+      };
     });
 
-    const items = response.data.items || [];
-    console.log(`[calendar.service] Found ${items.length} upcoming events for teacher ${teacherId}.`);
-
-    const events = items.map(event => ({
-      eventId: event.id,
-      summary: event.summary,
-      description: event.description || '',
-      start: event.start?.dateTime || event.start?.date || '',
-      end: event.end?.dateTime || event.end?.date || '',
-      htmlLink: event.htmlLink || ''
-    }));
-
+    console.log(`[calendar.service] Found ${events.length} synced events for teacher ${teacherId}.`);
     return events;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error(`[calendar.service] Error fetching upcoming events for teacher ${teacherId}:`, error.message);
+    console.error(`[calendar.service] Error fetching synced events for teacher ${teacherId}:`, error.message);
     throw new Error("Failed to fetch calendar events.");
   }
 };
@@ -132,52 +127,96 @@ export const syncExternalEvents = async (teacherId: string) => {
     const teacherDoc = await db.collection('teachers').doc(teacherId).get();
     const data = teacherDoc.data();
 
-    // Check if sync is even enabled.
-    if (!data?.autoSyncEnabled || !data?.linkedCalendarId) {
-      console.log(`[calendar.service] Sync skipped: Not enabled or configured for ${teacherId}.`);
+    if (!data || !data.autoSyncEnabled) {
+      console.log(`[calendar.service] Sync skipped: Not enabled for ${teacherId}.`);
       return;
     }
 
-    // Pull events from the next 30 days
-    const timeMin = new Date();
-    const timeMax = new Date();
-    timeMax.setDate(timeMax.getDate() + 30);
+    // 1. Sync Google Calendar if connected
+    if (data.linkedCalendarId) {
+      try {
+        const timeMin = new Date();
+        const timeMax = new Date();
+        timeMax.setDate(timeMax.getDate() + 30);
 
-    const auth = await getAuthenticatedClient(teacherId);
-    const calendarAPI = google.calendar({ version: "v3", auth });
+        const auth = await getAuthenticatedClient(teacherId);
+        const calendarAPI = google.calendar({ version: "v3", auth });
 
-    const response = await calendarAPI.events.list({
-      calendarId: data.linkedCalendarId,
-      timeMin: timeMin.toISOString(),
-      timeMax: timeMax.toISOString(),
-      singleEvents: true,
-      orderBy: 'startTime',
-    });
+        const response = await calendarAPI.events.list({
+          calendarId: data.linkedCalendarId,
+          timeMin: timeMin.toISOString(),
+          timeMax: timeMax.toISOString(),
+          singleEvents: true,
+          orderBy: 'startTime',
+          maxResults: 500, // Increased from default
+        });
 
-    const batch = db.batch();
-    const collectionRef = db.collection('teachers').doc(teacherId).collection('externalEvents');
+        const batch = db.batch();
+        const collectionRef = db.collection('teachers').doc(teacherId).collection('externalEvents');
 
-    if (response.data.items) {
-      response.data.items.forEach(item => {
-        if (item.id && item.start) {
-          // Use the Google Event ID as the document ID for idempotency (upsert logic)
-          const docRef = collectionRef.doc(item.id);
+        response.data.items?.forEach(item => {
+          if (item.id) {
+            const docRef = collectionRef.doc(`google_${item.id}`);
+            batch.set(docRef, {
+              summary: item.summary,
+              description: item.description || null,
+              start: item.start?.dateTime || item.start?.date,
+              end: item.end?.dateTime || item.end?.date || '',
+              htmlLink: item.htmlLink,
+              source: 'google',
+              syncedAt: admin.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          }
+        });
+
+        await batch.commit();
+        console.log(`[calendar.service] Synced Google events for ${teacherId}.`);
+      } catch (err: any) {
+        console.error(`[calendar.service] Google sync failed for ${teacherId}:`, err.message);
+      }
+    }
+
+    // 2. Sync Outlook Calendar if connected
+    if (data.outlookCalendarConnected) {
+      try {
+        const token = await getAccessToken(teacherId);
+        const response = await axios.get('https://graph.microsoft.com/v1.0/me/calendar/events', {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            '$select': 'id,subject,bodyPreview,start,end,webLink',
+            '$top': 500 // Increased from 50
+          }
+        });
+
+        const batch = db.batch();
+        const collectionRef = db.collection('teachers').doc(teacherId).collection('externalEvents');
+
+        response.data.value.forEach((item: any) => {
+          const docRef = collectionRef.doc(`outlook_${item.id}`);
           batch.set(docRef, {
-            summary: item.summary,
-            description: item.description || null,
-            start: item.start.dateTime || item.start.date,
-            end: item.end?.dateTime || item.end?.date || '',
-            htmlLink: item.htmlLink,
+            summary: item.subject,
+            description: item.bodyPreview || null,
+            start: item.start.dateTime,
+            end: item.end.dateTime,
+            htmlLink: item.webLink,
+            source: 'outlook',
             syncedAt: admin.firestore.FieldValue.serverTimestamp()
           }, { merge: true });
-        }
-      });
-      await batch.commit();
-      console.log(`[calendar.service] Successfully synced ${response.data.items.length} events for ${teacherId}.`);
+        });
+
+        await batch.commit();
+        console.log(`[calendar.service] Synced Outlook events for ${teacherId}.`);
+      } catch (err: any) {
+        console.error(`[calendar.service] Outlook sync failed for ${teacherId}:`, err.message);
+      }
     }
+
+    // 3. Sync iCal Feeds
+    await syncICalFeeds(teacherId);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error(`[calendar.service] Sync Error for ${teacherId}:`, error.message);
-    // Don't throw, let background jobs fail gracefully
+    console.error(`[calendar.service] Global Sync Error for ${teacherId}:`, error.message);
   }
 };
+

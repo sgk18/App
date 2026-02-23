@@ -1,6 +1,7 @@
-const { google } = require('googleapis');
-const admin = require('firebase-admin');
 const { getAuthenticatedClient } = require('./googleAuth');
+const { getAccessToken } = require('./outlookAuth');
+const { syncICalFeeds } = require('./ical-service');
+const axios = require('axios');
 
 /**
  * Fetches the user's Google Calendars so they can select which one to link.
@@ -138,50 +139,92 @@ const syncExternalEvents = async (teacherId) => {
     const teacherDoc = await admin.firestore().collection('teachers').doc(teacherId).get();
     const data = teacherDoc.data();
 
-    // Check if sync is even enabled.
-    if (!data.autoSyncEnabled || !data.linkedCalendarId) {
-      console.log(`[calendar.service] Sync skipped: Not enabled or configured for ${teacherId}.`);
+    if (!data.autoSyncEnabled) {
+      console.log(`[calendar.service] Sync skipped: Not enabled for ${teacherId}.`);
       return;
     }
 
-    // Pull events from the next 30 days
-    const timeMin = new Date();
-    const timeMax = new Date();
-    timeMax.setDate(timeMax.getDate() + 30);
+    // 1. Sync Google Calendar if connected
+    if (data.linkedCalendarId) {
+      try {
+        const timeMin = new Date();
+        const timeMax = new Date();
+        timeMax.setDate(timeMax.getDate() + 30);
 
-    const auth = await getAuthenticatedClient(teacherId);
-    const calendarAPI = google.calendar({ version: "v3", auth });
+        const auth = await getAuthenticatedClient(teacherId);
+        const calendarAPI = google.calendar({ version: "v3", auth });
 
-    const response = await calendarAPI.events.list({
-      calendarId: data.linkedCalendarId,
-      timeMin: timeMin.toISOString(),
-      timeMax: timeMax.toISOString(),
-      singleEvents: true,
-      orderBy: 'startTime',
-    });
+        const response = await calendarAPI.events.list({
+          calendarId: data.linkedCalendarId,
+          timeMin: timeMin.toISOString(),
+          timeMax: timeMax.toISOString(),
+          singleEvents: true,
+          orderBy: 'startTime',
+        });
 
-    const batch = admin.firestore().batch();
-    const collectionRef = admin.firestore().collection('teachers').doc(teacherId).collection('externalEvents');
+        const batch = admin.firestore().batch();
+        const collectionRef = admin.firestore().collection('teachers').doc(teacherId).collection('externalEvents');
 
-    response.data.items.forEach(item => {
-      // Use the Google Event ID as the document ID for idempotency (upsert logic)
-      const docRef = collectionRef.doc(item.id);
-      batch.set(docRef, {
-        summary: item.summary,
-        description: item.description || null,
-        start: item.start.dateTime || item.start.date,
-        end: item.end.dateTime || item.end.date,
-        htmlLink: item.htmlLink,
-        syncedAt: admin.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-    });
+        response.data.items.forEach(item => {
+          const docRef = collectionRef.doc(`google_${item.id}`);
+          batch.set(docRef, {
+            summary: item.summary,
+            description: item.description || null,
+            start: item.start.dateTime || item.start.date,
+            end: item.end.dateTime || item.end.date,
+            htmlLink: item.htmlLink,
+            source: 'google',
+            syncedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        });
 
-    await batch.commit();
-    console.log(`[calendar.service] Successfully synced ${response.data.items.length} events for ${teacherId}.`);
+        await batch.commit();
+        console.log(`[calendar.service] Synced Google events for ${teacherId}.`);
+      } catch (err) {
+        console.error(`[calendar.service] Google sync failed for ${teacherId}:`, err.message);
+      }
+    }
+
+    // 2. Sync Outlook Calendar if connected
+    if (data.outlookCalendarConnected) {
+      try {
+        const token = await getAccessToken(teacherId);
+        const response = await axios.get('https://graph.microsoft.com/v1.0/me/calendar/events', {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            '$select': 'subject,bodyPreview,start,end,webLink',
+            '$top': 50
+          }
+        });
+
+        const batch = admin.firestore().batch();
+        const collectionRef = admin.firestore().collection('teachers').doc(teacherId).collection('externalEvents');
+
+        response.data.value.forEach(item => {
+          const docRef = collectionRef.doc(`outlook_${item.id}`);
+          batch.set(docRef, {
+            summary: item.subject,
+            description: item.bodyPreview || null,
+            start: item.start.dateTime,
+            end: item.end.dateTime,
+            htmlLink: item.webLink,
+            source: 'outlook',
+            syncedAt: admin.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+        });
+
+        await batch.commit();
+        console.log(`[calendar.service] Synced Outlook events for ${teacherId}.`);
+      } catch (err) {
+        console.error(`[calendar.service] Outlook sync failed for ${teacherId}:`, err.message);
+      }
+    }
+
+    // 3. Sync iCal Feeds
+    await syncICalFeeds(teacherId);
 
   } catch (error) {
     console.error(`[calendar.service] Sync Error for ${teacherId}:`, error.message);
-    // Don't throw, let background jobs fail gracefully
   }
 };
 

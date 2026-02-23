@@ -63,4 +63,67 @@ router.get('/events', async (req, res) => {
   }
 });
 
+/**
+ * Route: POST /api/calendar/ical/link
+ * Description: Links an iCal feed to the teacher's profile.
+ */
+router.post('/ical/link', async (req, res) => {
+  try {
+    const teacherId = req.user.uid;
+    const { icalUrl, label } = req.body;
+
+    if (!icalUrl) {
+      return res.status(400).json({ error: "No iCal URL provided." });
+    }
+
+    const newFeed = {
+      id: admin.firestore().collection('teachers').doc(teacherId).collection('icalFeeds').doc().id,
+      url: icalUrl,
+      label: label || "External iCal",
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+
+    await admin.firestore().collection('teachers').doc(teacherId).collection('icalFeeds').doc(newFeed.id).set(newFeed);
+
+    res.status(200).json({ message: "iCal feed linked successfully.", feed: newFeed });
+  } catch (error) {
+    console.error("Error linking iCal:", error.message);
+    res.status(500).json({ error: "Failed to link iCal feed." });
+  }
+});
+
+/**
+ * Route: DELETE /api/calendar/ical/:feedId
+ * Description: Removes an iCal feed.
+ */
+router.delete('/ical/:feedId', async (req, res) => {
+  try {
+    const teacherId = req.user.uid;
+    const { feedId } = req.params;
+
+    await admin.firestore().collection('teachers').doc(teacherId).collection('icalFeeds').doc(feedId).delete();
+
+    res.status(200).json({ message: "iCal feed removed." });
+  } catch (error) {
+    console.error("Error removing iCal feed:", error.message);
+    res.status(500).json({ error: "Failed to remove iCal feed." });
+  }
+});
+
+/**
+ * Route: GET /api/calendar/ical/list
+ * Description: Lists all iCal feeds for the teacher.
+ */
+router.get('/ical/list', async (req, res) => {
+  try {
+    const teacherId = req.user.uid;
+    const snapshot = await admin.firestore().collection('teachers').doc(teacherId).collection('icalFeeds').get();
+    const feeds = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.status(200).json({ feeds });
+  } catch (error) {
+    console.error("Error listing iCal feeds:", error.message);
+    res.status(500).json({ error: "Failed to list iCal feeds." });
+  }
+});
+
 module.exports = router;

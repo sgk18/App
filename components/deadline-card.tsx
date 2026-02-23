@@ -14,23 +14,21 @@ interface DeadlineCardProps {
 export function DeadlineCard({ deadline }: DeadlineCardProps) {
   const CardContent = (
     <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:-translate-y-1">
-      {/* Priority accent bar */}
+      {/* Status accent bar */}
       <div
         className={`absolute top-0 left-0 h-1 w-full ${
-          deadline.priority === "high"
-            ? "bg-red-500"
-            : deadline.priority === "medium"
-            ? "bg-amber-500"
-            : "bg-emerald-500"
+          new Date(deadline.dueDate).getTime() < Date.now()
+            ? "bg-orange-500"
+            : "bg-sky-500"
         }`}
       />
 
       <div className="flex items-start justify-between gap-3 mt-1">
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           {deadline.isGoogleEvent ? (
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-sky-50 dark:bg-sky-900/30 px-2 py-1 text-xs font-medium text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800">
               <CalendarDays className="h-3 w-3" />
-              Google Calendar
+              External Event
             </span>
           ) : (
             <>

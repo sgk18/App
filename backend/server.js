@@ -13,6 +13,7 @@ app.use(express.json());
 
 // Public Routes (No JWT required)
 app.use('/', require('./routes/google.routes'));
+app.use('/', require('./routes/outlook.routes'));
 
 // Protected Routes (JWT automatically required for all sub-routes)
 app.use('/api', require('./routes/protected.routes'));

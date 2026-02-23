@@ -38,8 +38,8 @@ export default function DashboardPage() {
               console.error("Failed to fetch deadlines from backend");
             }
             
-            // 2. Fetch external Google Calendar events
-            fetchEvents();
+            // 2. Fetch external events (Google, Outlook, iCal)
+            await fetchEvents();
             
           } catch (error) {
             console.error("Error fetching dashboard data:", error);
@@ -122,13 +122,13 @@ export default function DashboardPage() {
             </p>
           </div>
           
-          <button
-            onClick={handleGoogleCalendarLink}
+          <Link
+            href="/settings"
             className="inline-flex items-center gap-2 rounded-xl bg-white dark:bg-zinc-900 border border-border px-4 py-2.5 text-sm font-medium text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground transition-all"
           >
-            <CalendarPlus className="h-4 w-4 text-blue-500" />
-            Link Google Calendar
-          </button>
+            <CalendarPlus className="h-4 w-4 text-primary" />
+            Manage Calendars
+          </Link>
         </div>
 
         {/* Combined Stats Grid */}
@@ -138,8 +138,8 @@ export default function DashboardPage() {
               label: "Upcoming",
               value: upcomingCount,
               icon: CalendarDays,
-              color: "text-blue-500",
-              bg: "bg-blue-100 dark:bg-blue-900/30",
+              color: "text-sky-500",
+              bg: "bg-sky-100 dark:bg-sky-900/30",
             },
             {
               label: "High Priority",
@@ -152,15 +152,15 @@ export default function DashboardPage() {
               label: "Overdue",
               value: overdueCount,
               icon: CheckCircle2,
-              color: "text-amber-500",
-              bg: "bg-amber-100 dark:bg-amber-900/30",
+              color: "text-orange-500",
+              bg: "bg-orange-100 dark:bg-orange-900/30",
             },
             {
-              label: "Google Events",
+              label: "External Events",
               value: events.length || 0,
               icon: CalendarPlus,
-              color: "text-emerald-500",
-              bg: "bg-emerald-100 dark:bg-emerald-900/30",
+              color: "text-sky-500",
+              bg: "bg-sky-100 dark:bg-sky-900/30",
             },
           ].map((stat) => (
             <div

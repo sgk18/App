@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth-middleware';
-import { fetchCalendarEvents } from '@/lib/calendar-service';
+import { fetchCalendarEvents, syncExternalEvents } from '@/lib/calendar-service';
 
 export async function GET(req: NextRequest) {
   const authResult = await verifyToken(req);
@@ -12,12 +12,15 @@ export async function GET(req: NextRequest) {
     const teacherId = authResult.user?.uid;
     if (!teacherId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    // Trigger sync in background (don't await for faster response)
+    syncExternalEvents(teacherId).catch(err => console.error("Background sync failed:", err.message));
+
     const events = await fetchCalendarEvents(teacherId);
     return NextResponse.json({ events }, { status: 200 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error("Error fetching upcoming events:", error.message);
-    // Might not have a calendar linked yet, handle gracefully
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
+

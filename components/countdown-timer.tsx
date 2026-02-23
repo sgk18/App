@@ -21,7 +21,7 @@ export function CountdownTimer({ dueDate, compact = false }: CountdownTimerProps
 
   if (timeLeft.overdue) {
     return (
-      <div className="flex items-center gap-1.5 text-red-500 dark:text-red-400">
+      <div className="flex items-center gap-1.5 text-orange-500 dark:text-orange-400">
         <AlertTriangle className="h-4 w-4" />
         <span className="text-sm font-semibold">Overdue</span>
       </div>

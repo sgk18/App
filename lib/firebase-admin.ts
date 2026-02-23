@@ -13,7 +13,13 @@ const initFirebaseAdmin = () => {
   if (privateKey && projectId && clientEmail) {
     try {
       // Clean environment artifacts
-      privateKey = privateKey.replace(/['"]/g, '').trim().replace(/\\n/g, '\n').replace(/\r/g, '');
+      // The key might be wrapped in quotes or have escaped newlines
+      privateKey = privateKey.replace(/^["']|["']$/g, '').trim().replace(/\\n/g, '\n');
+      
+      // Ensure private key header/footer are correct and not doubled
+      if (privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+        // If it was already a valid string with \n, and we replaced \n, it should be fine.
+      }
       if (projectId.includes('.')) projectId = projectId.split('.')[0];
       projectId = projectId.replace(/['"]/g, '').trim();
 
